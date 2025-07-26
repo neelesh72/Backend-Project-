@@ -1,0 +1,47 @@
+ Milestone 3:Data Schema 
+
+backend/
+└── app/
+    ├── database.py
+    ├── models/
+    │   ├── product.py
+    │   └── conversation.py  ✅ [NEW FILE]
+    ├── load_data.py
+    ├── __init__.py
+
+
+---
+
+🧱 1. conversation.py (NEW File)
+
+➡️ backend/app/models/conversation.py
+
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text
+from sqlalchemy.orm import relationship
+from app.database import Base
+from datetime import datetime
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    sessions = relationship("ConversationSession", back_populates="user")
+
+
+class ConversationSession(Base):
+    __tablename__ = "sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    started_at = Column(DateTime, default=datetime.utcnow)
+    user = relationship("User", back_populates="sessions")
+    messages = relationship("ChatMessage", back_populates="session")
+
+
+class ChatMessage(Base):
+    __tablename__ = "messages"
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("sessions.id"))
+    sender = Column(String)  # 'user' or 'bot'
+    message = Column(Text)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    session = relationship("ConversationSession", back_populates="messages")
