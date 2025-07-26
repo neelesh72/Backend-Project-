@@ -1,0 +1,124 @@
+
+✅ Milestone 4 
+backend/
+└── app/
+    ├── api/
+    │   └── chat.py       ✅ (NEW)
+    ├── database.py
+    ├── load_data.py
+    ├── models/
+    │   ├── product.py
+    │   └── conversation.py
+    ├── main.py            ✅ (NEW)
+    └── __init__.py
+
+main.py (start the server)
+
+ backend/app/main.py
+
+from fastapi import FastAPI
+from app.api import chat
+from app.database import engine
+from app.models import conversation, product
+
+# Create all tables
+conversation.Base.metadata.create_all(bind=engine)
+product.Base.metadata.create_all(bind=engine)
+
+app = FastAPI()
+
+# Include chat route
+app.include_router(chat.router, prefix="/api")
+
+
+---
+
+2️⃣ chat.py (main API logic)
+
+➡️ backend/app/api/chat.py
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.models.conversation import User, ConversationSession, ChatMessage
+from datetime import datetime
+
+router = APIRouter()
+
+# Request body model
+class ChatRequest(BaseModel):
+    username: str
+    message: str
+    conversation_id: int | None = None
+
+@router.post("/chat")
+def chat_endpoint(req: ChatRequest, db: Session = next(get_db())):
+    # 1. Find or create user
+    user = db.query(User).filter(User.username == req.username).first()
+    if not user:
+        user = User(username=req.username)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+    # 2. Find or create session
+    if req.conversation_id:
+        session = db.query(ConversationSession).filter(
+            ConversationSession.id == req.conversation_id).first()
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
+    else:
+        session = ConversationSession(user_id=user.id)
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+
+    # 3. Save user message
+    user_msg = ChatMessage(
+        session_id=session.id,
+        sender="user",
+        message=req.message,
+        timestamp=datetime.utcnow()
+    )
+    db.add(user_msg)
+
+    # 4. Dummy AI Response (placeholder)
+    ai_response = "Thanks for your message! (real AI logic coming in next milestone)"
+
+    bot_msg = ChatMessage(
+        session_id=session.id,
+        sender="bot",
+        message=ai_response,
+        timestamp=datetime.utcnow()
+    )
+    db.add(bot_msg)
+    db.commit()
+
+    return {
+        "conversation_id": session.id,
+        "user": req.username,
+        "user_message": req.message,
+        "bot_response": ai_response
+    }
+
+
+---
+
+🗃️ database.py (add get_db function)
+
+➡️ backend/app/database.py (add at end)
+
+from sqlalchemy.orm import sessionmaker
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+---
+
+
