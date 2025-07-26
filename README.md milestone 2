@@ -1,0 +1,91 @@
+# Backend-Project-
+ecommerce-chatbot/
+└── backend/
+    ├── app/
+    │   ├── __init__.py
+    │   ├── database.py
+    │   ├── load_data.py
+    │   └── models/
+    │       └── product.py
+    ├── products.csv
+    └── requirements.txt
+📄 1. backend/app/database.py
+python
+Copy
+Edit
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+DATABASE_URL = "sqlite:///./ecommerce.db"
+
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+SessionLocal = sessionmaker(bind=engine)
+Base = declarative_base()
+📄 2. backend/app/models/product.py
+python
+Copy
+Edit
+from sqlalchemy import Column, Integer, String, Float
+from app.database import Base
+
+class Product(Base):
+    __tablename__ = "products"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    category = Column(String)
+    price = Column(Float)
+    quantity = Column(Integer)
+    sold = Column(Integer)
+📄 3. backend/app/load_data.py
+python
+Copy
+Edit
+import csv
+from app.database import SessionLocal, engine
+from app.models.product import Product
+from app.database import Base
+
+Base.metadata.create_all(bind=engine)
+
+def load_products():
+    db = SessionLocal()
+    with open("products.csv", newline='', encoding='utf-8') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            product = Product(
+                name=row["name"],
+                category=row["category"],
+                price=float(row["price"]),
+                quantity=int(row["quantity"]),
+                sold=int(row["sold"])
+            )
+            db.add(product)
+        db.commit()
+        db.close()
+
+if __name__ == "__main__":
+    load_products()
+📄 4. backend/app/__init__.py
+(Leave this file empty — just create it.)
+
+📄 5. backend/requirements.txt
+nginx
+Copy
+Edit
+fastapi
+sqlalchemy
+uvicorn
+📄 6. backend/products.csv (Sample)
+Make sure this file is present in the backend/ folder.
+
+csv
+Copy
+Edit
+name,category,price,quantity,sold
+T-shirt,Clothing,299.99,100,30
+Smartphone,Electronics,15999.00,50,10
+Notebook,Stationery,50.00,200,80
+Headphones,Electronics,899.99,75,20
+Shoes,Footwear,1200.50,60,15
